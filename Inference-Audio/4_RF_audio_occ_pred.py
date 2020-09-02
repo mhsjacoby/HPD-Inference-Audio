@@ -51,7 +51,7 @@ def main():
 
 	# clf = Audio_Pred("trained_RF(%s-%s).joblib"%(python_version(),calcsize("P")*8)) # Call the classifier matching python version and bit
 	# clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Inference-Audio/trained_RF({python_version}-{calcsize("P")*8}).joblib')
-	clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Inference-Audio/trained_RF(3.7.6-64).joblib')
+	clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Audio/Inference-Audio/trained_RF(3.7.6-64).joblib')
 
 
 

@@ -1,30 +1,34 @@
 """
 4_RF_audio_occ_pred.py
 Authors: Sin Yong Tan and Maggie Jacoby
+Edited: 2020-09-01 shift prediction by 10 seconds fill missing with nan and remove duplicates
 
-Takes processed audio in .npz files (organized by hour/by day) and outputs an occupancy decision
+Input: Processed audio in .npz files (organized by hour/by day)
+Output: 'complete (full day: 8640) occupancy decision for each day, may have nans
+
+To run: python3 4_RF_audio_occ_pred.py -path /Volumes/TOSHIBA-18/H6-black/ 
+	optional parameters: 	-hub (eg 'BS2'). if not specified will do for all hubs
+							-save_location.  if not specifed same as read
+							-start_index (number, eg 1). corresponds to how many files to skip
 
 """
 
-
-
 import numpy as np
+import pandas as pd
 from joblib import load
 from platform import python_version
 from struct import calcsize
 import argparse
 import glob
 import time
-
-
 import os
+import sys
+from datetime import datetime
 
 import warnings
 warnings.filterwarnings("ignore")
+from my_functions import *
 
-'''
-Need to shift the prediction csv time +1 during final OR-Gate
-'''
 
 class Audio_Pred(object):
 	def __init__(self, clf_path):
@@ -34,34 +38,26 @@ class Audio_Pred(object):
 		return self.clf.predict(audio)
 
 
-def mylistdir(directory, bit='', end=True):
-    filelist = os.listdir(directory)
-    if end:
-        return [x for x in filelist if x.endswith(f'{bit}') and not x.endswith('.DS_Store') and not x.startswith('Icon')]
+def create_timeframe(start_date, end_date=None, freq="10S"):
+    
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    if end_date == None:
+        end_date = start_date + pd.Timedelta(days=1)
     else:
-         return [x for x in filelist if x.startswith(f'{bit}') and not x.endswith('.DS_Store') and not x.startswith('Icon')]
-        
-def make_storage_directory(target_dir):
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-    return target_dir
+        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+
+    timeframe = pd.date_range(start_date, end_date, freq=freq).strftime('%Y-%m-%d %H:%M:%S')[:-1]
+    timeframe = pd.to_datetime(timeframe)
+    
+    return timeframe
 
 
-def main():
+def main(date_folder_path):
+	date = os.path.basename(date_folder_path)
 
-	# clf = Audio_Pred("trained_RF(%s-%s).joblib"%(python_version(),calcsize("P")*8)) # Call the classifier matching python version and bit
-	# clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Inference-Audio/trained_RF({python_version}-{calcsize("P")*8}).joblib')
-	clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Inference-Audio/trained_RF(3.7.6-64).joblib')
+	clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Audio/Inference-Audio/trained_RF(3.7.6-64).joblib')
 
-
-
-	# save_folder = "Inference_DB/H1-green/GS1/audio"
-
-	# npz looping
-
-	predictions = []
-	day_times = []
-
+	predictions, day_times = [], []
 	hour_npzs = glob.glob(os.path.join(date_folder_path, '*_ps.npz'))
 
 	for npz in hour_npzs:
@@ -82,13 +78,19 @@ def main():
 		day_times += times
 
 	timestamp = [f'{date} {time}' for time in day_times]
-	print(f'{len(predictions)} files.')
 
-	save_data = np.vstack((timestamp,predictions)).T # (N rows x 2 columns)
-
-	# # np.savetxt(os.path.join(save_folder,f"{date}.csv"), save_data, delimiter=',',fmt='%s',header="timestamp,occupied",comments='')
+	data = pd.DataFrame(data=predictions, index=timestamp, columns=['occupied'])
 	
-	np.savetxt(os.path.join(save_root_path,f'{date}.csv'), save_data, delimiter=',',fmt='%s',header="timestamp,occupied",comments='')
+	data.index = pd.to_datetime(data.index) #turn into datatime index
+	data = data[~data.index.duplicated(keep='first')] #remove duplicate values
+
+	timeframe = create_timeframe(date)		#create timestamp index for full day
+
+	data = data.reindex(timeframe, fill_value=np.nan) 	#use new index
+	data.index = data.index + pd.Timedelta(seconds=10)	#shift indexes up in time by 10 seconds
+	data.index.name = 'timestamp'
+
+	data.to_csv(os.path.join(save_root_path,f'{date}.csv'))
 
 
 
@@ -97,13 +99,13 @@ if __name__ == '__main__':
 	parser.add_argument('-path','--path', default='AA', type=str, help='path of stored data')
 	parser.add_argument('-hub', '--hub', default='', type=str, help='if only one hub... ')
 	parser.add_argument('-save_location', '--save', default='', type=str, help='location to store files (if different from path')
-
 	parser.add_argument('-start_index','--start_date_index', default=0, type=int, help='Processing START Date index')
 
 	args = parser.parse_args()
+
 	path = args.path
 	save_path = args.save if len(args.save) > 0 else path
-	home_system = path.strip('/').split('/')[-1]
+	home_system = os.path.basename(path.strip('/'))
 	H = home_system.split('-')
 	H_num, color = H[0], H[1][0].upper()
 	hubs = [args.hub] if len(args.hub) > 0 else sorted(mylistdir(path, bit=f'{color}S', end=False))
@@ -111,28 +113,18 @@ if __name__ == '__main__':
 
 	start_date_index = args.start_date_index
 
-	
-
 	for hub in hubs:
 		start = time.time()
 		print(f'Reading processed audio data from hub: {hub}')
 
-		read_root_path = os.path.join(path,hub,'processed_audio','audio_dct','*')
-		dates = sorted(glob.glob(read_root_path))[start_date_index:]
-		print('Dates: ', [os.path.basename(d) for d in dates])
-
+		read_root_path = os.path.join(path, hub, 'processed_audio', 'audio_dct','20*')
+		dates = sorted(glob.glob(f'{read_root_path}'))[start_date_index:]
 		save_root_path = make_storage_directory(os.path.join(save_path,'Inference_DB', hub, 'audio_inf'))
 		print("save_root_path: ", save_root_path)
 
 		for date_folder_path in dates:
-			date = os.path.basename(date_folder_path)
-			if not date.startswith('20'):
-				print(f'passing folder: {date}')
-				continue
-
-			print(f"Loading date folder: {date} ...")
-
-			main()
+			print(f"Loading date folder: {os.path.basename(date_folder_path)} ...")
+			main(date_folder_path)
 
 		end = time.time()
 		total_time = (end-start)/3600

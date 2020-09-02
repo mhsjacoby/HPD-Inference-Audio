@@ -17,7 +17,7 @@ def create_timeframe(file_path):
 	file_name = os.path.basename(file_path)  # csv file name with extension
 	index = file_name.find("-")
 	start_date = file_name[index-4:index+6]  # takes the "2019-02-23" part
-
+	# other way (replace last 2 lines): file_name.split('_')[-1].strip('.csv')
 	end_date = datetime.strptime(start_date, '%Y-%m-%d')
 	start_date = datetime.strptime(start_date, '%Y-%m-%d')
 	end_date = end_date + pd.Timedelta(days=1)

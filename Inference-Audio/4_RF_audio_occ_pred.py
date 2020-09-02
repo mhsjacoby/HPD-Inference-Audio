@@ -10,7 +10,6 @@ To run: python3 4_RF_audio_occ_pred.py -path /Volumes/TOSHIBA-18/H6-black/
 	optional parameters: 	-hub (eg 'BS2'). if not specified will do for all hubs
 							-save_location.  if not specifed same as read
 							-start_index (number, eg 1). corresponds to how many files to skip
-
 """
 
 import numpy as np
@@ -81,13 +80,13 @@ def main(date_folder_path):
 
 	data = pd.DataFrame(data=predictions, index=timestamp, columns=['occupied'])
 	
-	data.index = pd.to_datetime(data.index) #turn into datatime index
-	data = data[~data.index.duplicated(keep='first')] #remove duplicate values
+	data.index = pd.to_datetime(data.index) 				# turn into datatime index
+	data = data[~data.index.duplicated(keep='first')] 		# remove duplicate values
 
-	timeframe = create_timeframe(date)		#create timestamp index for full day
+	timeframe = create_timeframe(date)						# create timestamp index for full day
 
-	data = data.reindex(timeframe, fill_value=np.nan) 	#use new index
-	data.index = data.index + pd.Timedelta(seconds=10)	#shift indexes up in time by 10 seconds
+	data = data.reindex(timeframe, fill_value=np.nan) 		# use new index
+	data.index = data.index + pd.Timedelta(seconds=10)		# shift indexes up in time by 10 seconds
 	data.index.name = 'timestamp'
 
 	data.to_csv(os.path.join(save_root_path,f'{date}.csv'))
@@ -129,9 +128,3 @@ if __name__ == '__main__':
 		end = time.time()
 		total_time = (end-start)/3600
 		print(f'Total time taken to process hub {hub} in home {H_num}: {total_time:.02} hours')
-
-
-
-
-
-

@@ -24,8 +24,35 @@ def create_timeframe(file_path):
 # 	time_frame = pd.date_range(start_date, end_date, freq = '10S').strftime('%Y-%m-%d %H:%M:%S').tolist()
 	time_frame = pd.date_range(start_date, end_date, freq = '10S').strftime('%Y-%m-%d %H:%M:%S')
 	time_frame = time_frame[:-1]
-
 	return time_frame, file_name
+
+
+
+def create_timeframe(start_date, end_date=None, freq="10S"):
+	'''
+	v2 takes in string of date with %Y-%m-%d format
+	Updated with args: end_date and freq.
+	
+	v1 takes in full csv path:
+	"filepath" example: G:\H1-black\BS5\csv\H1_BS5_2019-02-23.csv
+	'''
+	start_date = datetime.strptime(start_date, '%Y-%m-%d')
+	if end_date == None:	
+		# end_date = datetime.strptime(start_date, '%Y-%m-%d')
+		end_date = start_date + pd.Timedelta(days=1)
+	else:
+		end_date = datetime.strptime(end_date, '%Y-%m-%d')
+		
+	time_frame = pd.date_range(start_date, end_date, freq=freq).strftime('%Y-%m-%d %H:%M:%S')
+	time_frame = time_frame[:-1]
+
+	return time_frame	
+
+
+
+
+
+
 
 
 
@@ -67,10 +94,13 @@ day = days[0]
 # Read data
 data = pd.read_csv(day,index_col=0)
 data.index = pd.to_datetime(data.index)
+data = data[~data.index.duplicated(keep='first') # remove duplicates
 
 # Complete data
 timeframe, fname = create_timeframe(day)
 timeframe = pd.to_datetime(timeframe)
+
+
 data = data.reindex(timeframe, fill_value=np.nan)
 
 # Shift the data by 1

@@ -26,6 +26,8 @@ from datetime import datetime
 
 import warnings
 warnings.filterwarnings("ignore")
+
+from gen_argparse import *
 from my_functions import *
 
 
@@ -110,7 +112,7 @@ if __name__ == '__main__':
 	hubs = [args.hub] if len(args.hub) > 0 else sorted(mylistdir(path, bit=f'{color}S', end=False))
 	print(f'List of Hubs: {hubs}')
 
-	start_date_index = args.start_date_index
+	# start_date_index = args.start_date_index
 
 	for hub in hubs:
 		start = time.time()

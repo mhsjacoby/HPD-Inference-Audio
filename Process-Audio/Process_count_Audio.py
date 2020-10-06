@@ -77,7 +77,7 @@ def process_wav(wav_name, date_folder_path, minute, fs=8000):
     time_file = f'{t[0:2]}:{t[2:4]}:{t[4:6]}'
 
     try:  
-        _, wav = scipy.io.wavfile.read(wav_path)
+        _, wav = scipy.io.wavfile.read(wav_path) # _ should be same fs
         audio_len_seconds = len(wav)/fs # length of audio clip in seconds
         all_seconds.append(time_file)
         assert (audio_len_seconds == 10.0)
@@ -102,7 +102,7 @@ def process_wav(wav_name, date_folder_path, minute, fs=8000):
         ################ Comment the following lines if don't want to perform dct ################
         processed_audio = dct(downsampled) # Perform DCT across different filter on each timepoint
         processed_audio = processed_audio[:,:12] # Keep only first 12 coefficients
-        processed_audio = scale(processed_audio,axis=1) # Normalizing/Scaling to zero mean & unit std                   
+        processed_audio = scale(processed_audio,axis=1) # Normalizing/Scaling to zero mean & unit std      ?? Look into this                 
         ################################################################
   
         return processed_audio, downsampled, time_file

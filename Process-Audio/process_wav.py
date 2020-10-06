@@ -1,10 +1,12 @@
+
+
 def process_wav(wav_name, date_folder_path, minute, fs=8000):
     wav_path = os.path.join(date_folder_path, minute, wav_name)
     t = wav_name.split(' ')[-1].strip('._audio.wav')
     time_file = f'{t[0:2]}:{t[2:4]}:{t[4:6]}'
 
     try:  
-        _, wav = scipy.io.wavfile.read(wav_path) # _ should be same fs
+        _, wav = scipy.io.wavfile.read(wav_path) # _ = fs
         audio_len_seconds = len(wav)/fs # length of audio clip in seconds
         all_seconds.append(time_file)
         assert (audio_len_seconds == 10.0)

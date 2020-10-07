@@ -1,7 +1,7 @@
 """
 audio_confidence.py
 Authors: Sin Yong Tan and Maggie Jacoby
-Edited: 2020-10-06 
+Edited: 2020-10-07 
 
 Input: Processed audio in .npz files (organized by hour/by day)
 Output: 'complete (full day: 8640) occupancy decision for each day, may have nans
@@ -34,27 +34,18 @@ warnings.filterwarnings("ignore")
 from gen_argparse import *
 from my_functions import *
 
-# from load_data import load_data
 
-
-
-# class Audio_Pred(object):
-#     def __init__(self, clf_path):
-#         self.clf = load(clf_path)
-
-#     def occ_pred(self, audio):
-#         return self.clf.predict(audio)
+def DESTROY_transient_effect(data):
+	data[:,:10,:] = data[:,10:20,:] # data shape = (N,1000,16)
+	return data
 
 
 def create_timeframe(start_date, end_date=None, freq="10S"):
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
     end_date = datetime.strptime(end_date, '%Y-%m-%d') if end_date else start_date + pd.Timedelta(days=1)
-    clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Audio/Inference-Audio/trained_RF(3.7.6-64).joblib')
     timeframe = pd.date_range(start_date, end_date, freq=freq).strftime('%Y-%m-%d %H:%M:%S')[:-1]
     timeframe = pd.to_datetime(timeframe)
-    
     return timeframe
-
 
 
 def load_data(npz):
@@ -69,35 +60,29 @@ def load_data(npz):
 
     if len(audio_data) > 0:
         input_data = np.stack(audio_data)
+        input_data = DESTROY_transient_effect(input_data)
         input_data = input_data.transpose(0,2,1)
-
-        print('returning data')
-        print(np.shape(input_data))
         return input_data, time_keys
     else:
-        print('returning nothing')
         return [], []
 
 
 def main(date_folder_path):
     date = os.path.basename(date_folder_path)
 
-    # clf = Audio_Pred(f'/Users/maggie/Documents/Github/HPD-Inference_and_Processing/Audio/Inference-Audio/trained_RF(3.7.6-64).joblib')
-
-
-    predictions, day_times = [], []
+    preds, probs, day_times = [], [], []
     hour_npzs = glob(os.path.join(date_folder_path, '*_ds.npz'))
 
-    
-
     for npz in hour_npzs:
-
-        input_data, times = load_data(npz)
         hour = os.path.basename(npz).split('_')[1]
-        print('hour:', hour)
+        
+        input_data, times = load_data(npz)
+
+        if len(input_data) == 0:
+            print(f'No data for hour: {hour}')
+            continue
 
         num_filters = input_data.shape[1]
-
         # Flatten for scaling and reshape to 3D
         ori_input_shape = input_data.shape
         input_data = input_data.reshape((len(input_data), -1))
@@ -105,41 +90,19 @@ def main(date_folder_path):
         input_data = input_data.reshape((len(input_data), ori_input_shape[1], ori_input_shape[2], 1))
 
         class_prob = model.predict(input_data)
-        predictions = class_prob[:,1]
-        # predictions = [probability[1] for probability in class_prob]
-        print(len(predictions), len(times))
-        
-        for time, pred in zip(predictions, times):
-            print(time, pred)
-
-        sys.exit()
-
-
-        # 
-        # audio_data = np.load(npz)
-        # times = audio_data.files
-
-        # preds = []
-
-        # for time in times:
-        #     DCTs = audio_data[time]
-        #     if len(DCTs) != 0:
-        #         pred = np.max(clf.occ_pred(DCTs)) # WavFile-wise OR-gate
-        #         preds.append(pred)
-        #     else:
-        #         preds.append(np.nan)
-        # predictions += preds
-        # day_times += times
-
+        probabilities = class_prob[:,1]
+        predictions = (class_prob>0.5).astype("int32")
+        predictions = np.argmax(predictions, axis=1)
+        probs.extend(probabilities)
+        preds.extend(predictions)
+        day_times.extend(times)
+ 
     timestamp = [f'{date} {time}' for time in day_times]
-
-    data = pd.DataFrame(data=predictions, index=timestamp, columns=['occupied'])
+    data = pd.DataFrame(data={'occupied': preds, 'probability': probs}, index=timestamp)
     
     data.index = pd.to_datetime(data.index) 				# turn into datatime index
-    data = data[~data.index.duplicated(keep='first')] 		# remove duplicate values
-
+    # data = data[~data.index.duplicated(keep='first')] 		# remove duplicate values
     timeframe = create_timeframe(date)						# create timestamp index for full day
-
     data = data.reindex(timeframe, fill_value=np.nan) 		# use new index
     data.index = data.index + pd.Timedelta(seconds=10)		# shift indexes up in time by 10 seconds
     data.index.name = 'timestamp'

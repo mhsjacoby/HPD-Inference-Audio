@@ -21,9 +21,6 @@ import pandas as pd
 
 from glob import glob
 from datetime import datetime
-from joblib import load
-from platform import python_version
-from struct import calcsize
 
 from tensorflow.keras.models import model_from_json
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report

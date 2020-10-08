@@ -11,7 +11,7 @@ This code takes a file of labeled audio clips in one hub and copies existing one
 - from_hub (already sorted out)
 - hubs (one or more than you want to copy)
 
-eg: python3 audio_to_audio_copy.py -path /Volumes/TOSHIBA-21/H1-red/ -save_location '/Users/maggie/Desktop/Auto-Labeled-Audio' -from_hub RS4 -to_hubs RS5
+eg: python3 audio_to_audio_copy.py -path /Volumes/TOSHIBA-21/H1-red/ -save_location /Users/maggie/Desktop/Auto-Labeled-Audio -from_hub RS4 -to_hubs RS5
 """
 
 
@@ -55,12 +55,12 @@ if __name__ == '__main__':
 
     for hub in hubs:
         print(hub)
-        save_path = make_storage_directory(os.path.join(save_loc, home_system, f'{hub}_noise'))
+        save_path = make_storage_directory(os.path.join(save_loc, home_system, f'{hub}_{audio_type}_auto'))
 
         for fname in mylistdir(copy_loc, bit='.wav'):
             day, time = fname.strip('_audio.wav').split(' ')
             minute_folder = time[:4]
-            file_path = os.path.join(path, hub, 'audio', day, minute_folder, fname)
+            file_path = os.path.join(path, hub, 'audio_split', day, minute_folder, fname)
             from_loc = glob(file_path)
 
             if len(from_loc) > 0:

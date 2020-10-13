@@ -1,4 +1,9 @@
+"""
+process_wav.py
 
+Function for processing and downsampling audio files
+to used in Process_count_Audio.py - not implemented yet
+"""
 
 def process_wav(wav_name, date_folder_path, minute, fs=8000):
     wav_path = os.path.join(date_folder_path, minute, wav_name)

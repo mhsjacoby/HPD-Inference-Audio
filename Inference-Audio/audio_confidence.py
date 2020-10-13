@@ -79,7 +79,7 @@ def main(date_folder_path):
             print(f'No data for hour: {hour}')
             continue
 
-        num_filters = input_data.shape[1]
+        # num_filters = input_data.shape[1]
         # Flatten for scaling and reshape to 3D
         ori_input_shape = input_data.shape
         input_data = input_data.reshape((len(input_data), -1))

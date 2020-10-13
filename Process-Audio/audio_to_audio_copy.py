@@ -1,7 +1,7 @@
 """
 audio_to_audio_copy.py
 Author: Maggie Jacoby
-	2020-09-15: move argument parser to separate file
+	2020-10-08: change save format
 
 This code takes a file of labeled audio clips in one hub and copies existing ones from another hub that match the timestamp	
 

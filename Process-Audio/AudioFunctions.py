@@ -1,7 +1,7 @@
 """
 AudioFunctions.py
 Functions for facilitiating audio processing files written by Sin Yong Tan, Ali Saffari, Maggie Jacoby
-Maggie Jacoby, June 2020
+Updated: Maggie Jacoby, 2020-10-19
 """
 
 
@@ -9,21 +9,9 @@ Maggie Jacoby, June 2020
 # Maggie's file handling Functions
 import os
 import numpy as np
+from my_functions import *
 
-def mylistdir(directory, bit='', end=True):
-    filelist = os.listdir(directory)
-    if end:
-        return [x for x in filelist if x.endswith(f'{bit}') and not x.endswith('.DS_Store')]
-    else:
-         return [x for x in filelist if x.startswith(f'{bit}') and not x.endswith('.DS_Store')]
-
-
-def make_storage_directory(target_dir):
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-    return target_dir
-
-
+# --------------------------------------------------------------------
 def make_empty_dict(hour, mins=60, secs=60, freq=10):
     d = {f'{str(hour[0:2]).zfill(2)}:{str(M).zfill(2)}:{str(S).zfill(2)}':
         np.zeros((0,0)) for M in range(0,mins) for S in range(0,secs,freq)}
@@ -40,23 +28,6 @@ def make_fill_full(content, hour):
     for x in content.keys():
         full_content[x] = content[x]
     return full_content
-
-
-def make_read_write_paths(root_dir, hub, pi_audio=False):
-    read_root_path = os.path.join(root_dir, hub, 'audio')
-    # save_dir = '/Users/maggie/Desktop/Audio_test_save'
-    save_root_path = os.path.join(root_dir, hub, 'processed_audio')
-    paths = {'read': read_root_path, 'write': save_root_path}
-
-    if pi_audio:
-        pi_path = os.path.join(root_dir, hub, 'audio_from_pi')
-        print(f'Pi audio path: {pi_path}')
-        paths['pi'] = pi_path
-    else:
-        print('No audio from pi')
-    
-    return paths
-
 # --------------------------------------------------------------------
 
 def write_summary(home, hub, days, write_dir):

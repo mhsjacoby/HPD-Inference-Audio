@@ -3,37 +3,32 @@ Process_count_Audio.py
 Base code written by Sin Yong Tan, based on processing technique developed by Ali Saffair, 
 Helper functions stored in AudioFunctions.py
 Editied and audio counting added by Maggie Jacoby
-Most recent edit: 6/4/2020
+Most recent edit: 2020-10-19
 """
-
-
-import numpy as np
-from glob import glob
 import os
-import scipy.io.wavfile
-import argparse
-from scipy.fftpack import dct
-from sklearn.preprocessing import scale
-import warnings
-warnings.filterwarnings("ignore")
-
+import sys
+from glob import glob
+import numpy as np
 import pandas as pd
 from datetime import datetime
 
+import scipy.io.wavfile
+from scipy.fftpack import dct
+from sklearn.preprocessing import scale
+
+import warnings
+warnings.filterwarnings("ignore")
+
 from AudioFunctions import *
+from gen_argparse import *
+from my_functions import *
 
 import time
 
 # ==================================================================
-
 # Filter parameters
-
-# Sample rate and desired cutoff frequencies (in Hz).
-fs = 8000   # defined in process_wav function inputs
-# fh = 1600 # not used, but keepping as a record
-
+fs = 8000   # defined in process_wav function input
 filter_banks = create_filter_banks()
-
 number_of_filters = len(filter_banks)+1 # +1 for loww-pass (0~100hz that was not in filterbanks)
 filter_start_index = [i for i in range(0,number_of_filters*5,5)]
 increment = 80
@@ -46,28 +41,7 @@ for j in range(number_of_filters):
 
 filter_i_sampling_index = np.transpose(filter_i_sampling_index)
 filter_i_sampling_index = filter_i_sampling_index.astype(int)
-
 # ==================================================================
-
-# Parse user input
-
-parser = argparse.ArgumentParser(description='Convert Wav to 12 DCTs')
-
-parser.add_argument('-root','--root_dir', default='/Users/maggie/Desktop/HPD_mobile_data/HPD-env/', type=str,
-                    help='Root Directory') 
-# parser.add_argument('-hub','--hub', default='RS1', type=str,
-#                     help='Hub: RS1, BS2, etc')
-parser.add_argument('-pi_audio', '--pi_audio', default=False, type=bool,
-                    help='does pi audio exist? True if so, else leave blank')
-
-# If adding start/end
-parser.add_argument('-start','--start_date_index', default=0, type=int,
-                    help='Processing START Date index')
-parser.add_argument('-end','--end_date', default=None, type=str,
-                    help='Processing END Date')
-
-args = parser.parse_args()
-
 
 
 
@@ -98,13 +72,6 @@ def process_wav(wav_name, date_folder_path, minute, fs=8000):
 
         for i in range(number_of_filters):
             downsampled[:,i] = processed_audio[filter_i_sampling_index[:,i],i]
-
-        ################ Comment the following lines if don't want to perform dct ################
-        # processed_audio = dct(downsampled) # Perform DCT across different filter on each timepoint
-        # processed_audio = processed_audio[:,:12] # Keep only first 12 coefficients
-        # processed_audio = scale(processed_audio,axis=1) # Normalizing/Scaling to zero mean & unit std      ?? Look into this                 
-        ################################################################
-  
         return downsampled, time_file
     
     except Exception as e:
@@ -123,9 +90,7 @@ def check_pi(pi_path):
             print(f'No pi files for {day}')
         else:
             for minute in sorted(all_mins):
-                # found_on_pi = found_on_pi + mylistdir(os.path.join(pi_dir, minute), bit='.wav')
                 this_minute = mylistdir(os.path.join(pi_dir, minute), bit='.wav')
-                # print(f'found: {this_minute}')
                 for audio_f in this_minute:
                     name = audio_f.split('_')[0]
                     found_on_pi[name] = (day, minute)
@@ -139,32 +104,17 @@ def check_pi(pi_path):
 
 if __name__ == '__main__':
 
-    # hubs = ['RS1', 'RS2', 'RS3', 'RS4', 'RS5']
-    # hubs = ['BS2', 'BS3', 'BS4', 'RS5']
-    # hubs = ['BS4', 'BS5']
-
-
     for hub in hubs:
-        root_dir = args.root_dir
-        # hub = args.hub
-        pi_audio = args.pi_audio
-        start_date_index = args.start_date_index
-        end_date = args.end_date
 
-        home_name = root_dir.strip('/').split('/')[-1]
+        read_root_path = os.path.join(path, hub, 'audio')
+        pi_path = os.path.join(path, hub, 'audio_from_pi')
+        save_root_path = os.path.join(save_root, hub, 'processed_audio')
 
-        h_num = home_name.split('-')[0]
-        print(f'Home: {home_name}, num: {h_num}, hub: {hub}, pi_audio: {pi_audio}')
+        print(f'Home: {home_system}, hub: {hub}, pi_audio: {pi_audio}, read_root: {read_root_path}')
 
-        paths = make_read_write_paths(root_dir, hub, pi_audio)
-        read_root_path, save_root = paths['read'], paths['write']
-        print(f'reading from: {read_root_path}')
-        print(f'saving to: {save_root}')
-
-
-        dates = sorted(mylistdir(read_root_path, bit='2019', end=False))
-        print(dates)
-        # dates = dates[start_date_index:]
+        dates = glob(os.path.join(read_root_path, '2019-*'))
+        # dates = [x for x in dates if os.path.basename(x) >= start_date and os.path.basename(x) <= end_date]
+        print('dates: ', dates)
 
         all_days_data = {}
 
@@ -178,9 +128,9 @@ if __name__ == '__main__':
 
         t_start = time.perf_counter()
         # ==== Start Looping Folders ====
-        for date in dates:
+        for date_folder_path in dates:
+            date = os.path.basename(date_folder_path)
             t1 = time.perf_counter()
-            date_folder_path = os.path.join(read_root_path, date)
             print("Loading date folder: " + date + "...")
             all_mins = sorted(mylistdir(date_folder_path))
 
@@ -191,17 +141,12 @@ if __name__ == '__main__':
 
             else:
                 # Make storage directories
-                downsampled_folder = make_storage_directory(os.path.join(save_root, 'audio_downsampled', date))
-                processed_folder = make_storage_directory(os.path.join(save_root, 'audio_dct', date))
-                            
+                downsampled_folder = make_storage_directory(os.path.join(save_root_path, 'audio_downsampled', date))                            
                 hours = [str(x).zfill(2) + '00' for x in range(0,24)]
 
                 for hour in hours:
                     print('hour', hour)
-
                     # create dictionaries to store downsampled (*_ds) and processed (*_ps) audio
-                    # content_ds = make_empty_dict(hour)
-                    # content_ps = make_empty_dict(hour)
                     content_ds = {}
                     # content_ps = {}
                     full_list = make_all_seconds(hour)
@@ -218,14 +163,13 @@ if __name__ == '__main__':
                             for wav_name in wavs:
                                 downsampled_audio, time_file = process_wav(wav_name, date_folder_path, minute)
 
-                                if len(processed_audio) > 0:
+                                if len(downsampled_audio) > 0:
                                     all_seconds.append(time_file)
                                     content_ds[time_file] = downsampled_audio # store downsampled (not dct)
                                     # content_ps[time_file] = processed_audio # store content, similar timestamp format as env. csv(s) timestamp                      
                                 else:
                                     print(f'no audio for {time_file}')
                                     ################################################################     
-
 
                     ### Check for missing files on pi and read in
                     list_hour_actual = [x for x in content_ds.keys()]
@@ -244,36 +188,23 @@ if __name__ == '__main__':
                                 if m in this_hour_on_pi:
                                     print(f'found! {m}, {found_on_pi[m]}') 
                                     day, minute = found_on_pi[m]
-
-                                    # print(day, minute, f'{m}_audio.wav', os.path.join(paths['pi'], day))
                                     downsampled_pi, time_file = process_wav(f'{m}_audio.wav', os.path.join(paths['pi'], day), minute)
 
                                     if len(processed_pi) > 0:
                                         content_ds[time_file] = downsampled_pi # store downsampled (not dct)
-                                        # content_ps[time_file] = processed_pi # store content, similar timestamp format as env. csv(s) timestamp  
 
                     list_hour_after = [x for x in content_ds.keys()]
                     missing_after = list(set(full_list)-set(list_hour_after))
                     missing_after = [f'{date} {x.replace(":", "")}' for x in missing_after]
-                    print(f'found on pi: {len(missing)-len(missing_after)}')
+                    if len(missing)-len(missing_after) > 0:
+                        print(f'found on pi: {len(missing)-len(missing_after)}')
 
                     full_content_ds = make_fill_full(content_ds, hour)
-                    # print(f'len of full ds: {len(full_content_ds)}, full with value: {sum(1 for i in full_content_ds.values() if len(i) > 0)}, len of content_ds: {len(content_ds)}')
-                    # full_content_ps = make_fill_full(content_ps, hour)
-                    # print(f'len of full ps: {len(full_content_ps)}, full with value: {sum(1 for i in full_content_ps.values() if len(i) > 0)}, len of content_ps: {len(content_ps)}')
-
 
                     # ################ npz_compressed saving at the end of each hour (or desired saving interval) ################
-                    fname_ds = f'{date}_{hour}_{hub}_{home_name.split("-")[0]}_ds.npz' # ==> intended to produce "0000", "0100", .....
-                    # fname_ps = f'{date}_{hour}_{hub}_{home_name.split("-")[0]}_ps.npz' # ==> intended to produce "0000", "0100", .....
-                    print(fname_ds)
+                    fname_ds = f'{date}_{hour}_{hub}_{H_num}_ds.npz' # ==> intended to produce "0000", "0100", .....
                     downsampled_save_path = os.path.join(downsampled_folder, fname_ds)
-                    # processed_save_path = os.path.join(processed_folder, fname_ps)
-
                     np.savez_compressed(downsampled_save_path, **full_content_ds)
-                    # np.savez_compressed(processed_save_path, **full_content_ps)
-                    # np.savez_compressed(downsampled_save_path, **content_ds)
-                    # np.savez_compressed(processed_save_path, **content_ps)
                     # ################################################################
             
             all_seconds_set = sorted(list(set(all_seconds)))
@@ -284,11 +215,7 @@ if __name__ == '__main__':
                 summary = {'total': len(all_seconds_set), 'start_end': (all_seconds_set[0], all_seconds_set[-1])}
             print(date, summary)
             all_days_data[date] = summary
-
             t_now = time.perf_counter()
 
             print(f'======= end of day {date} --- time to processing one day: {t_now-t1} total so far: {t_now-t_start} =======')
-
-        write_summary(home_name, hub, all_days_data, root_dir)
-
-        print("Done")
+        write_summary(home_system, hub, all_days_data, path)

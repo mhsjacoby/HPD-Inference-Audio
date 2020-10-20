@@ -18,6 +18,7 @@ import time
 import pickle
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 
 from glob import glob
 from datetime import datetime
@@ -64,6 +65,17 @@ def load_data(npz):
         return [], []
 
 
+def norm_by_filter(data):
+	# Assume data dimension: (N，16，1000)
+	N, num_filter, filter_data_len = data.shape
+	assert filter_data_len > num_filter, "Assume data dimension: (N_samples, num_filter, filter_data_len)"
+	scaled_data = deepcopy(data)
+	for N in range(len(data)):
+		for filter_ in range(len(data[N])): # (0, 0, 1000)
+			scaled_data[N][filter_] = (scaled_data[N][filter_] - np.min(scaled_data[N][filter_]))/(np.max(scaled_data[N][filter_]) - np.min(scaled_data[N][filter_]))
+	return scaled_data
+
+
 def main(date_folder_path):
     date = os.path.basename(date_folder_path)
 
@@ -73,7 +85,7 @@ def main(date_folder_path):
     for npz in hour_npzs:
         hour = os.path.basename(npz).split('_')[1]
         
-        input_data, times = load_data(npz)
+        input_data, times = load_data(npz) # should be (N, 16, 1000) after transpose in load_data -> N=360 for one hour
 
         if len(input_data) == 0:
             print(f'No data for hour: {hour}')
@@ -82,9 +94,11 @@ def main(date_folder_path):
         # num_filters = input_data.shape[1]
         # Flatten for scaling and reshape to 3D
         ori_input_shape = input_data.shape
-        input_data = input_data.reshape((len(input_data), -1))
-        input_data = scaler.transform(input_data)
-        input_data = input_data.reshape((len(input_data), ori_input_shape[1], ori_input_shape[2], 1))
+        
+        # input_data = input_data.reshape((len(input_data), -1))
+        # input_data = scaler.transform(input_data)
+        input_data = norm_by_filter(input_data)
+        input_data = input_data.reshape((len(input_data), ori_input_shape[1], ori_input_shape[2], 1)) # should be (N, 16, 1000, 1)
 
         class_prob = model.predict(input_data)
         probabilities = class_prob[:,1]
@@ -111,11 +125,16 @@ def main(date_folder_path):
 if __name__ == '__main__':  
     print(f'List of Hubs: {hubs}')
 
-    model_path = os.getcwd()
-    model = model_from_json(open(os.path.join(model_path, 'Audio_CNN/model-94_96/CNN_model.json')).read())
-    model.load_weights(os.path.join(model_path, 'Audio_CNN/model-94_96/CNN_weights.h5'))
+    current_path = os.getcwd()
+    model_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_model.json')
+    model = model_from_json(open(model_path).read())
+    weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_{home_system}.h5')
+    model.load_weights(weight_path)
     model.summary()
-    scaler = pickle.load(open(os.path.join(model_path, 'Audio_CNN/model-94_96/scaler.pkl'), 'rb'))
+    # sys.exit()
+    # scaler_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'scaler_h1-red.pkl')
+    # scaler_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'scaler_{home_system}.pkl')
+    # scaler = pickle.load(open(scaler_path, 'rb'))
 
     for hub in hubs:
         start = time.time()

@@ -1,7 +1,7 @@
 """
 audio_confidence.py
 Authors: Sin Yong Tan and Maggie Jacoby
-Edited: 2020-10-07 
+Edited: 2020-10-20 scale each filter, no longer use external scaler file 
 
 Input: Processed audio in .npz files (organized by hour/by day)
 Output: 'complete (full day: 8640) occupancy decision for each day, may have nans
@@ -91,12 +91,8 @@ def main(date_folder_path):
             print(f'No data for hour: {hour}')
             continue
 
-        # num_filters = input_data.shape[1]
-        # Flatten for scaling and reshape to 3D
         ori_input_shape = input_data.shape
-        
-        # input_data = input_data.reshape((len(input_data), -1))
-        # input_data = scaler.transform(input_data)
+
         input_data = norm_by_filter(input_data)
         input_data = input_data.reshape((len(input_data), ori_input_shape[1], ori_input_shape[2], 1)) # should be (N, 16, 1000, 1)
 
@@ -131,10 +127,6 @@ if __name__ == '__main__':
     weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_{home_system}.h5')
     model.load_weights(weight_path)
     model.summary()
-    # sys.exit()
-    # scaler_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'scaler_h1-red.pkl')
-    # scaler_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'scaler_{home_system}.pkl')
-    # scaler = pickle.load(open(scaler_path, 'rb'))
 
     for hub in hubs:
         start = time.time()

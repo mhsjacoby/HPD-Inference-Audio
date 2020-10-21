@@ -10,13 +10,16 @@ Author: Maggie Jacoby
 
 ## To-Do
 - **Add in unpickling file.**
+- Split out `process_wav` function from `Process_count_Audio.py`. 
 - Check and possibly edit `Process_count_Audio.py` to fit latest practices.
-- ~~Modify `4_RF_audio_occ_pred.py` to use `gen_argparse` functions.~~
-- ~~Work on plotting code for wave files.~~
 - Write code to automatically subset files based on amplitude (similar to or to be used after `copy_audio.py`).
 - ~~Write code to split 20-second long files into two 10-second long files.~~
-- Split out `process_wav` function from `Process_count_Audio.py`. 
+- ~~Modify `4_RF_audio_occ_pred.py` to use `gen_argparse` functions.~~
+- ~~Work on plotting code for wave files.~~
 
+
+---
+# Repository Contents
 
 ## Process-Audio
 Audio was collected in 10-second long .wav files for most homes. A few early homes had 20-second long files. Audio was pickled in some cases, but for most homes raw wav files were transferred directly. 
@@ -66,32 +69,12 @@ Audio was collected in 10-second long .wav files for most homes. A few early hom
     Takes testing/training sets and performs classifcation, reporting accuracy results.
 
 
-All the model files are located under `Audio_CNN`. 
-- `CNN_testing_code`
-    This contains labeled audio (under `processed`) for testing the classifier with `load_data.py` (and `load_saved_models_maggieEdits.py`).
+    ### Audio_CNN
+    All the model files stored in the folder `model-94_96`.
 
 
-## ARCHIVE
-- audio_predict.py
-
-    Similar to `audio_confidence.py`, but doesn't output confidence level (only binary prediction). 
-
-- load_data.py, load_saved_models.py (multiple versions)
-
-    Previous testing code from SY.
-
-    ### random_forest_clf
-    Before switching to a convolutional neural network, inferences were done with a random forest classifer. This is the code and model for that. 
-
-    - 4_RF_audio_occ_pred.py
-    
-    This takes in a path to the processed audio files and outputs occupancy decisions. 
-    
-    - trained_RL(3.7.6-64).joblib
-
-        This is the old audio classifier.
-
-
+---
+---
 ## Workflow for labeling audio files
 1. After unpickling or transferring .wav files, run image inferencing code (`HPD-Inference_and_Processing/Images/Inference-Images\confidence.py`) on the *Training Dates* subset to generate occupajncy predictions. 
 
@@ -115,3 +98,27 @@ All the model files are located under `Audio_CNN`.
 1. Process using `Process_count_Audio.py` to get `*_ds.npz` files (downsampled, but not discrete cosine transformed. These should be stored in `.../H6-black/BS2/processsed_audio/audio_downsampled` in folders by day, and .npz files by hour.
 
 2. Perform inference using `audio_confidence.py` on the downsampled files.  Output is a complete daywise csv with 10-second frequency probabilities and predictions stored in `.../H6-black/Inference_DB/BS3/audio_inf/`.
+
+---
+## ARCHIVE
+- audio_predict.py
+
+    Similar to `audio_confidence.py`, but doesn't output confidence level (only binary prediction). 
+
+- load_data.py, load_saved_models.py (multiple versions)
+
+    Previous testing code from SY.
+
+    ### random_forest_clf
+    Before switching to a convolutional neural network, inferences were done with a random forest classifer. This is the code and model for that. 
+
+    - 4_RF_audio_occ_pred.py
+    
+    This takes in a path to the processed audio files and outputs occupancy decisions. 
+    
+    - trained_RL(3.7.6-64).joblib
+
+        This is the old audio classifier.
+
+- `CNN_testing_code`
+    This contains labeled audio (under `processed`) for testing the classifier with `load_data.py` (and `load_saved_models_maggieEdits.py`).

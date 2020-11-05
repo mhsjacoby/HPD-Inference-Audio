@@ -37,7 +37,7 @@ Audio was collected in 10-second long .wav files for most homes. A few early hom
     Function for processing and downsampling audio files
     To be used in Process_count_Audio.py - not implemented yet
 
-    ### AutoLabelingWorkflow
+    ### LabelingWorkflow
     - copy_audio.py
 
         This code is similar to `copy_img.py`. It takes in the IMAGE inferences (the 10-second frequency final CSVs, eg stored in `.../H6-black/Inference_DB/BS2/img_inf/` ) and copies the actual audio files that occur in occupied image blocks into labeled folders (eg `.../H6-black/Auto_Labeled/audio_BS2/`). Human verification is then used to confirm noise. 
@@ -109,10 +109,11 @@ Audio was collected in 10-second long .wav files for most homes. A few early hom
 
 
 ## Steps for generating inferences on Audio:
-0. Unpickle audio files if necessary. Should be in .wav format. 
+0.  a. Run `Process-Audio/extract_audioPickles.py` to unpickle audio files if necessary. Should be in
+    .wav format. 
 
-    b. If neccessary, run `split_wav.py` to split 20 second files into 10 second files. 
+    b. If neccessary, run `Process-Audio/LabelingWorkflow/split_wav.py` to split 20 second files into 10 second files. 
 
-1. Process using `Process_count_Audio.py` to get `*_ds.npz` files (downsampled, but not discrete cosine transformed. These should be stored in `.../H6-black/BS2/processsed_audio/audio_downsampled` in folders by day, and .npz files by hour.
+1. Process using `Process-Audio/Process_count_Audio.py` to get `*_ds.npz` files (downsampled, but not discrete cosine transformed. These should be stored in `.../H6-black/BS2/processsed_audio/audio_downsampled` in folders by day, and .npz files by hour.
 
-2. Perform inference using `audio_confidence.py` on the downsampled files.  Output is a complete daywise csv with 10-second frequency probabilities and predictions stored in `.../H6-black/Inference_DB/BS3/audio_inf/`.
+2. Perform inference using `Inference-Audio/audio_confidence.py` on the downsampled files.  Output is a complete daywise csv with 10-second frequency probabilities and predictions stored in `.../H6-black/Inference_DB/BS3/audio_inf/`.

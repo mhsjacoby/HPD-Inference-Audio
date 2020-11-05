@@ -3,7 +3,7 @@ audio_to_audio_copy.py
 Author: Maggie Jacoby
 Update: 2020-10-08 change save format
 
-Part of Audio Labeling Workflow
+Part of Labeling Workflow
 - step 4 (run after manually separating )
 
 Uses: my_functions.py
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         for fname in mylistdir(copy_loc, bit='.wav'):
             day, time = fname.strip('_audio.wav').split(' ')
             minute_folder = time[:4]
-            file_path = os.path.join(path, hub, 'audio_split', day, minute_folder, fname)
+            file_path = os.path.join(path, hub, 'audio', day, minute_folder, fname)
             from_loc = glob(file_path)
 
             if len(from_loc) > 0:

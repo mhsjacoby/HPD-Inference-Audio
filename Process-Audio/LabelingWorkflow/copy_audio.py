@@ -3,7 +3,7 @@ copy_audio.py
 Author: Maggie Jacoby & Sin Yong Tan
 Update: 2020-10-21 update documentation
 
-Part of Audio Labeling Workflow
+Part of Labeling Workflow
 - step 2 (run after generating image inferences)
 
 Uses: gen_argparse.py and my_functions.py
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 	for hub in hubs:
 		infer_csv_path = os.path.join(path,'Inference_DB', hub, 'img_inf', '*.csv')
 
-		save_path = make_storage_directory(os.path.join(save_root,'Auto_Labled', f'{mode}_{hub}'))
+		save_path = make_storage_directory(os.path.join(save_root,'Auto_Labeled', f'{mode}_{hub}'))
 		days = [day for day in sorted(glob(infer_csv_path))]
 
 		if len(days) == 0:

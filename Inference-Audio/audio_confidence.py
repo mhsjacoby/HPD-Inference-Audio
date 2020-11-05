@@ -17,6 +17,7 @@ import sys
 import time
 import pickle
 import numpy as np
+np.set_printoptions(precision=2, suppress=True)
 import pandas as pd
 from copy import deepcopy
 
@@ -33,9 +34,10 @@ from gen_argparse import *
 from my_functions import *
 
 
+
 def DESTROY_transient_effect(data):
-	data[:,:10,:] = data[:,10:20,:] # data shape = (N,1000,16)
-	return data
+    data[:,:10,:] = data[:,10:20,:] # data shape = (N,1000,16)
+    return data
 
 
 def create_timeframe(start_date, end_date=None, freq="10S"):
@@ -60,12 +62,16 @@ def load_data(npz):
         input_data = np.stack(audio_data)
         input_data = DESTROY_transient_effect(input_data)
         input_data = input_data.transpose(0,2,1)
+        x1 = input_data[0][0][:30]
+        np.savetxt(os.path.join('/Users/maggie/Desktop/before_filter.csv'), x1)
+
         return input_data, time_keys
     else:
         return [], []
 
 
 def norm_by_filter(data):
+    
 	# Assume data dimension: (N，16，1000)
 	N, num_filter, filter_data_len = data.shape
 	assert filter_data_len > num_filter, "Assume data dimension: (N_samples, num_filter, filter_data_len)"
@@ -92,12 +98,13 @@ def main(date_folder_path):
             continue
 
         ori_input_shape = input_data.shape
-
         input_data = norm_by_filter(input_data)
         input_data = input_data.reshape((len(input_data), ori_input_shape[1], ori_input_shape[2], 1)) # should be (N, 16, 1000, 1)
 
         class_prob = model.predict(input_data)
         probabilities = class_prob[:,1]
+        # probabilities = np.round(probabilities,4)
+        # print(probabilities)
         predictions = (class_prob>0.5).astype("int32")
         predictions = np.argmax(predictions, axis=1)
         probs.extend(probabilities)
@@ -108,23 +115,26 @@ def main(date_folder_path):
     data = pd.DataFrame(data={'occupied': preds, 'probability': probs}, index=timestamp)
     
     data.index = pd.to_datetime(data.index) 				# turn into datatime index
-    # data = data[~data.index.duplicated(keep='first')] 		# remove duplicate values
+    data = data[~data.index.duplicated(keep='first')] 		# remove duplicate values
     timeframe = create_timeframe(date)						# create timestamp index for full day
     data = data.reindex(timeframe, fill_value=np.nan) 		# use new index
     data.index = data.index + pd.Timedelta(seconds=10)		# shift indexes up in time by 10 seconds
     data.index.name = 'timestamp'
 
-    data.to_csv(os.path.join(save_root_path,f'{date}.csv'))
+    data.to_csv(os.path.join(save_root_path,f'{date}.csv'), float_format='%.2f')
 
 
 
 if __name__ == '__main__':  
+    
     print(f'List of Hubs: {hubs}')
 
     current_path = os.getcwd()
     model_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_model.json')
     model = model_from_json(open(model_path).read())
-    weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_{home_system}.h5')
+    # weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_{home_system}.h5')
+    weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_h2-red.h5')
+
     model.load_weights(weight_path)
     model.summary()
 

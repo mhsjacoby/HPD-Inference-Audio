@@ -1,11 +1,17 @@
 """
 Process_count_Audio.py
+branch: process_noFilter
 Base code written by Sin Yong Tan, based on processing technique developed by Ali Saffair, 
 Helper functions stored in AudioFunctions.py
 Editied and audio counting added by Maggie Jacoby
-Most recent edit: 2020-10-19
+Most recent edit: 2020-12-09 
+                    - Remove the filtering portion
+                    - Performs mean shift, rectification, and downsampling (1/100)
+                    - Saves as CSV in the same folder structure as the wav files (one csv per wav file)
 """
+
 import os
+import csv
 import sys
 from glob import glob
 import numpy as np
@@ -25,26 +31,6 @@ from my_functions import *
 
 import time
 
-# ==================================================================
-# Filter parameters
-fs = 8000   # defined in process_wav function input
-filter_banks = create_filter_banks()
-number_of_filters = len(filter_banks)+1 # +1 for loww-pass (0~100hz that was not in filterbanks)
-filter_start_index = [i for i in range(0,number_of_filters*5,5)]
-increment = 80
-num_final_datapoint = 1000
-temp = np.asarray([i for i in range(num_final_datapoint)])*increment # [0, 80, 160,...]
-filter_i_sampling_index = np.zeros((number_of_filters,num_final_datapoint))
-
-for j in range(number_of_filters):
-    filter_i_sampling_index[j] = temp + filter_start_index[j]
-
-filter_i_sampling_index = np.transpose(filter_i_sampling_index)
-filter_i_sampling_index = filter_i_sampling_index.astype(int)
-# ==================================================================
-
-
-
 def process_wav(wav_name, date_folder_path, minute, fs=8000):
     wav_path = os.path.join(date_folder_path, minute, wav_name)
     t = wav_name.split(' ')[-1].strip('._audio.wav')
@@ -55,28 +41,22 @@ def process_wav(wav_name, date_folder_path, minute, fs=8000):
         audio_len_seconds = len(wav)/fs # length of audio clip in seconds
         all_seconds.append(time_file)
         assert (audio_len_seconds == 10.0)
-        
-        ## Process Audio
-        processed_audio = np.zeros((int(len(wav)),number_of_filters)) # Placeholder
-        
-        temp = butter_lowpass_filter(wav, 100, fs, order=6) # low pass filter (first filter)
-        temp -= np.mean(temp) # Mean Shift
-        processed_audio[:,0] = abs(temp) # Full wave rectify
 
-        for idx, Filter in enumerate(filter_banks):
-            temp = butter_bandpass_filter(wav, Filter[0], Filter[1], fs, order=6) # Band pass filter
-            processed_audio[:, idx+1] = abs(temp) # Full wave rectify
+        len_wav = int(len(wav))
+        num_final_datapoint = 800
+        inc = int(len(wav)/num_final_datapoint)
 
-        ## Downsample:
-        downsampled = np.zeros((num_final_datapoint,number_of_filters))
+        processed_audio = wav - np.mean(wav)   # Mean Shift
+        processed_audio = abs(processed_audio) # Full wave rectify
+        downsampled = processed_audio[0::inc]  # Downsample
 
-        for i in range(number_of_filters):
-            downsampled[:,i] = processed_audio[filter_i_sampling_index[:,i],i]
         return downsampled, time_file
     
     except Exception as e:
         print(f'Error processing file {wav_path}: {e}')
+
         return [], time_file
+
 
 # ==================================================================
 ## Check pi for all audio files
@@ -98,10 +78,6 @@ def check_pi(pi_path):
 # ==================================================================
 
 
-
-
-
-
 if __name__ == '__main__':
 
     for hub in hubs:
@@ -120,7 +96,7 @@ if __name__ == '__main__':
 
         if pi_audio == True:
             print('Checking pi ...')
-            found_on_pi = check_pi(paths['pi'])
+            found_on_pi = check_pi(pi_path)
             print(f'Number of files found on pi: {len(found_on_pi)}')
         else:
             print('No pi audio files received')
@@ -130,92 +106,59 @@ if __name__ == '__main__':
         # ==== Start Looping Folders ====
         for date_folder_path in dates:
             date = os.path.basename(date_folder_path)
-            t1 = time.perf_counter()
+            start = datetime.now()
             print("Loading date folder: " + date + "...")
             all_mins = sorted(mylistdir(date_folder_path))
 
             all_seconds = []
 
-            if len(all_mins) == 0:
-                print(f'Date folder {date} is empty')
-
-            else:
-                # Make storage directories
-                downsampled_folder = make_storage_directory(os.path.join(save_root_path, 'audio_downsampled', date))                            
+            if len(all_mins) > 0:                 
                 hours = [str(x).zfill(2) + '00' for x in range(0,24)]
 
                 for hour in hours:
-                    print('hour', hour)
-                    # create dictionaries to store downsampled (*_ds) and processed (*_ps) audio
+
+                    # create dictionaries to store downsampled (*_ds) audio
                     content_ds = {}
-                    # content_ps = {}
                     full_list = make_all_seconds(hour)
                     this_hour = [x for x in all_mins if x[0:2]==hour[0:2]]
-
                     for minute in sorted(this_hour):
+
                         minute_path = os.path.join(date_folder_path, minute)
                         wavs = sorted(mylistdir(minute_path, bit='.wav'))
 
-                        if len(wavs) == 0:
-                            print("Time folder "+ os.path.basename(minute_path) + " is empty")
-
-                        else:
+                        if len(wavs) > 0:
                             for wav_name in wavs:
+                                save_path = make_storage_directory(os.path.join(save_root_path, 'audio_csv', date, minute))
+                                fname = wav_name.strip('_audio.wav').replace(' ', '_') + f'_{hub}_{H_num}.csv'
+                                
                                 downsampled_audio, time_file = process_wav(wav_name, date_folder_path, minute)
 
                                 if len(downsampled_audio) > 0:
+                                    np.savetxt(os.path.join(save_path, fname), downsampled_audio, delimiter=",")
                                     all_seconds.append(time_file)
                                     content_ds[time_file] = downsampled_audio # store downsampled (not dct)
-                                    # content_ps[time_file] = processed_audio # store content, similar timestamp format as env. csv(s) timestamp                      
-                                else:
-                                    print(f'no audio for {time_file}')
                                     ################################################################     
 
                     ### Check for missing files on pi and read in
                     list_hour_actual = [x for x in content_ds.keys()]
-                    print(f'length of processed this hour: {len(content_ds)}')
 
                     missing = list(set(full_list)-set(list_hour_actual))
                     missing = [f'{date} {x.replace(":", "")}' for x in missing]
-                    print(f'len of missing: {len(missing)}')
 
-                    
-                    
                     if len(missing) > 0:
                         if len(found_on_pi) > 0:
                             this_hour_on_pi = [x for x in found_on_pi if (x.split(' ')[0] == date and x.split(' ')[1][0:2] == hour[0:2])]
                             for m in missing:
                                 if m in this_hour_on_pi:
-                                    print(f'found! {m}, {found_on_pi[m]}') 
                                     day, minute = found_on_pi[m]
-                                    downsampled_pi, time_file = process_wav(f'{m}_audio.wav', os.path.join(paths['pi'], day), minute)
+                                    downsampled_pi, time_file = process_wav(f'{m}_audio.wav', os.path.join(pi_path, day), minute)
 
-                                    if len(processed_pi) > 0:
-                                        content_ds[time_file] = downsampled_pi # store downsampled (not dct)
-
-                    list_hour_after = [x for x in content_ds.keys()]
-                    missing_after = list(set(full_list)-set(list_hour_after))
-                    missing_after = [f'{date} {x.replace(":", "")}' for x in missing_after]
-                    if len(missing)-len(missing_after) > 0:
-                        print(f'found on pi: {len(missing)-len(missing_after)}')
-
-                    full_content_ds = make_fill_full(content_ds, hour)
-
-                    # ################ npz_compressed saving at the end of each hour (or desired saving interval) ################
-                    fname_ds = f'{date}_{hour}_{hub}_{H_num}_ds.npz' # ==> intended to produce "0000", "0100", .....
-                    downsampled_save_path = os.path.join(downsampled_folder, fname_ds)
-                    np.savez_compressed(downsampled_save_path, **full_content_ds)
-                    # ################################################################
+                    
+                    ################ npz_compressed saving at the end of each hour (or desired saving interval) ################
+                    # fname_ds = f'{date}_{hour}_{hub}_{H_num}_ds.npz' # ==> intended to produce "0000", "0100", .....
+                    # fname_csv = f'{date}_{hour}_{hub}_{H_num}.csv'
+                    # downsampled_save_path = os.path.join(downsampled_folder, fname_ds)
+                    # np.savez_compressed(downsampled_save_path, **full_content_ds)
+                    ################################################################
             
-            all_seconds_set = sorted(list(set(all_seconds)))
-            total = len(all_seconds_set)
-            if total == 0:
-                summary = {'total': 0, 'start_end': (0,0)}
-            else:
-                summary = {'total': len(all_seconds_set), 'start_end': (all_seconds_set[0], all_seconds_set[-1])}
-            print(date, summary)
-            all_days_data[date] = summary
-            t_now = time.perf_counter()
-
-            print(f'======= end of day {date} --- time to processing one day: {t_now-t1} total so far: {t_now-t_start} =======')
-        write_summary(home_system, hub, all_days_data, path)
+            print(f'Time to process day {date}: {str(end-start).split(".")[0]}.')

@@ -55,6 +55,7 @@ if __name__ == '__main__':
 
 		end_date =  os.path.basename(days[-1]).strip('.csv') if not end_date else end_date
 		days = [day for day in days if os.path.basename(day).strip('.csv') <= end_date]
+		days = [day for day in days if os.path.basename(day).strip('.csv') >= start_date]
 		
 		print(f'Number of days: {len(days)}')
 

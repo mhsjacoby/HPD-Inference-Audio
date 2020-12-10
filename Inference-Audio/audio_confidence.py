@@ -133,7 +133,8 @@ if __name__ == '__main__':
     model_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_model.json')
     model = model_from_json(open(model_path).read())
     # weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_{home_system}.h5')
-    weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_h2-red.h5')
+    weight_path = os.path.join(current_path, 'Audio_CNN', 'model-94_96', f'CNN_weights_h2-red.h5') 
+    """ Don't use H1-red model!! Doesn't contain scaling!"""
 
     model.load_weights(weight_path)
     model.summary()

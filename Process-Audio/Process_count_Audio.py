@@ -29,7 +29,6 @@ from AudioFunctions import *
 from gen_argparse import *
 from my_functions import *
 
-import time
 
 def process_wav(wav_name, date_folder_path, minute, fs=8000):
     wav_path = os.path.join(date_folder_path, minute, wav_name)
@@ -136,8 +135,7 @@ if __name__ == '__main__':
                                 if len(downsampled_audio) > 0:
                                     np.savetxt(os.path.join(save_path, fname), downsampled_audio, delimiter=",")
                                     all_seconds.append(time_file)
-                                    content_ds[time_file] = downsampled_audio # store downsampled (not dct)
-                                    ################################################################     
+                                    content_ds[time_file] = downsampled_audio # store downsampled
 
                     ### Check for missing files on pi and read in
                     list_hour_actual = [x for x in content_ds.keys()]

@@ -88,8 +88,11 @@ if __name__ == '__main__':
         print(f'Home: {home_system}, hub: {hub}, pi_audio: {pi_audio}, read_root: {read_root_path}')
 
         dates = glob(os.path.join(read_root_path, '2019-*'))
-        # dates = [x for x in dates if os.path.basename(x) >= start_date and os.path.basename(x) <= end_date]
-        print('dates: ', dates)
+        if len(start_date) > 0:
+            dates = [x for x in dates if os.path.basename(x) >= start_date]
+        if len(end_date) > 0:
+            dates = [x for x in dates if os.path.basename(x) <= end_date]
+        print('dates: ', [os.path.basename(date) for date in dates])
 
         all_days_data = {}
 
@@ -101,7 +104,7 @@ if __name__ == '__main__':
             print('No pi audio files received')
             found_on_pi = []
 
-        t_start = time.perf_counter()
+        start = datetime.now()
         # ==== Start Looping Folders ====
         for date_folder_path in dates:
             date = os.path.basename(date_folder_path)
@@ -158,5 +161,5 @@ if __name__ == '__main__':
                     # downsampled_save_path = os.path.join(downsampled_folder, fname_ds)
                     # np.savez_compressed(downsampled_save_path, **full_content_ds)
                     ################################################################
-            
+            end = datetime.now()
             print(f'Time to process day {date}: {str(end-start).split(".")[0]}.')
